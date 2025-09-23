@@ -5,10 +5,13 @@ const cors = require("cors");
 dotenv.config();
 
 
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
+// Rate Limiting Middleware using Redis =======prevent DDoS attacks========
+app.use(apiLimiter);
 
 // Middleware to parse JSON
 app.use(express.json());
@@ -20,7 +23,7 @@ app.use(cors({
   credentials: true,  // if you need to send cookies or auth headers
 }));
 // Mount proxy routes
-app.use("/api", routes);
+app.use("/api",routes);
 
 app.listen(PORT, () => {
   console.log(`🚀 API Gateway running on port ${PORT}`);
