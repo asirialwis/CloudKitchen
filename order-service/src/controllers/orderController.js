@@ -24,11 +24,15 @@ const updateOrderStatus = async (req, res) => {
     try {
       const { orderId, status } = req.body;
   
+      // Extract userId from headers ===prevent IDOR=====
+      const userId = req.headers['x-user-id'];
+
       if (!orderId || !status) {
         return res.status(400).json({ message: "Order ID and new status are required" });
       }
   
-      const updatedOrder = await handleOrderStatusUpdate(orderId, status);
+      // Pass userId to the service function ===prevent IDOR=====
+      const updatedOrder = await handleOrderStatusUpdate(orderId, status, userId);
       if (!updatedOrder) {
         return res.status(404).json({ message: "Order not found" });
       }

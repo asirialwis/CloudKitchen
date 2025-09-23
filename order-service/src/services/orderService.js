@@ -1,6 +1,7 @@
 const Order = require("../models/Order");
 const { publishToQueue } = require("../utils/rabbitmq");
 const { notifyRestaurantService } = require("../rest-client/restaurentApi");
+const mongoose = require("mongoose");
 
 const handleOrderCreation = async ({
   userId,
@@ -28,14 +29,20 @@ const handleOrderCreation = async ({
   return savedOrder;
 };
 
-const handleOrderStatusUpdate = async (orderId, status) => {
-  const updatedOrder = await Order.findByIdAndUpdate(
-    orderId,
-    { status },
-    { new: true }
-  );
+// ===================Prevent IDOR by ensuring only the owner can update their order==============
+const handleOrderStatusUpdate = async (orderId, status, userId) => {
 
-  return updatedOrder;
+   if (!mongoose.Types.ObjectId.isValid(orderId)) return null;
+
+   const order = await Order.findById(orderId);
+
+  if (!order) return null;
+
+  // Only owner can update
+  if (order.userId.toString() !== userId) return null;
+
+  order.status = status;
+  return await order.save();
 };
 
 const getUserOrdersFromDB = async (userId) => {
@@ -45,6 +52,10 @@ const getUserOrdersFromDB = async (userId) => {
 };
 
 const cancelUserOrder = async (orderId, userId) => {
+
+  // Validate orderId       ===prevent IDOR=====
+  if (!mongoose.Types.ObjectId.isValid(orderId)) return null;
+
   // Find the order first
   const order = await Order.findById(orderId);
   
