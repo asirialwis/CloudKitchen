@@ -46,17 +46,38 @@ const userSignin = (allowedRoles) => async (req, res) => {
         const accessToken = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
 
-        // Prevent duplicate refresh tokens by removing the old instance of the same token
-        user.refreshTokens = user.refreshTokens.filter(token => token !== refreshToken);
-
-        // Add new refresh token and save
-        user.refreshTokens.push(refreshToken);
+        // Rotate refresh tokens: remove any identical tokens then add new
+        // Support both legacy string array and new object array
+        user.refreshTokens = (user.refreshTokens || []).filter((entry) => {
+            if (typeof entry === "string") return entry !== refreshToken;
+            return entry?.token !== refreshToken;
+        });
+        user.refreshTokens.push({ token: refreshToken, lastUsedAt: new Date() });
         await user.save();
 
-        return res.status(200).json({
-            accessToken: `${accessToken}`,
-            refreshToken: `${refreshToken}`
+        const isProd = process.env.NODE_ENV === "production";
+        const sameSite = isProd ? "lax" : "lax";
+        const domain = undefined; // default to host
+
+        // Set HttpOnly cookies
+        res.cookie("accessToken", accessToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite,
+            domain,
+            path: "/",
+            maxAge: 1000 * 60 * 15, // 15 minutes
         });
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: isProd,
+            sameSite,
+            domain,
+            path: "/",
+            maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+        });
+
+        return res.status(200).json({ message: "Signed in" });
     } catch (error) {
         return res.status(500).json({ message: "Login failed.", error: error.message });
     }

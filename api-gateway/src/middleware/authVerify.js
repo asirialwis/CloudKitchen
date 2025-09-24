@@ -2,12 +2,16 @@ const axios = require("axios");
 
 const authenticateUser = async (req, res, next) => {
   const token = req.headers.authorization;
-  if (!token) return res.status(401).json({ message: "Unauthorized: No token" });
+  const cookieHeader = req.headers.cookie; // forward cookies from browser
 
   try {
     // Verify token by calling the Auth Service
     const response = await axios.get(`${process.env.AUTH_SERVICE_URL}/user/verify-token`, {
-      headers: { Authorization: token },
+      headers: {
+        ...(token ? { Authorization: token } : {}),
+        ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+      },
+      withCredentials: true, // ensure axios allows cookies
     });
 
     const userData = response.data;
