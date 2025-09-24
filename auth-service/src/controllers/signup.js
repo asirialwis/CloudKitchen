@@ -5,6 +5,10 @@ const userSignup = async (req, res) => {
     try {
       const { name, email, password, role, location } = req.body;
 
+        if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ message: "Invalid email format." });
+        }
+
         // Check if username or email is already taken
         const existingUser = await User.findOne({ $or: [{ name }, { email }] });
 

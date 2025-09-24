@@ -1,41 +1,76 @@
+const mongoose = require("mongoose");
 const Delivery = require("../models/deliveryJob");
-// const User = require("../models/User");
+
+const ALLOWED_STATUSES = ["pending", "assigned", "in-progress", "delivered", "cancelled"];
+
+function validateObjectId(id, fieldName) {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error(`Invalid ${fieldName}`);
+  }
+  return id;
+}
+
+function validateStatus(status) {
+  if (!ALLOWED_STATUSES.includes(status)) {
+    throw new Error(`Invalid status value`);
+  }
+  return status;
+}
 
 const createDelivery = async (data) => {
-  const delivery = new Delivery(data);
+  // Whitelist only safe fields
+  const safeData = {
+    restaurantId: data.restaurantId && validateObjectId(data.restaurantId, "restaurantId"),
+    orderId: data.orderId && validateObjectId(data.orderId, "orderId"),
+    driverId: data.driverId && validateObjectId(data.driverId, "driverId"),
+    customerId: data.customerId && validateObjectId(data.customerId, "customerId"),
+    status: data.status ? validateStatus(data.status) : "pending",
+  };
+
+  const delivery = new Delivery(safeData);
   return await delivery.save();
 };
 
 const assignDriver = async (deliveryId, driverId) => {
+  validateObjectId(deliveryId, "deliveryId");
+  validateObjectId(driverId, "driverId");
+
   return await Delivery.findByIdAndUpdate(
     deliveryId,
-    {
-      driverId,
-      status: "assigned",
-    },
+    { driverId, status: "assigned" },
     { new: true }
   );
 };
 
 const updateStatus = async (id, status) => {
-  return await Delivery.findByIdAndUpdate(id, { status }, { new: true });
+  validateObjectId(id, "deliveryId");
+  const safeStatus = validateStatus(status);
+
+  return await Delivery.findByIdAndUpdate(id, { status: safeStatus }, { new: true });
 };
 
 const updateDeliveryJob = async (deliveryJob) => {
-  return await Delivery.findByIdAndUpdate(deliveryJob._id, deliveryJob);
+  validateObjectId(deliveryJob._id, "deliveryJob._id");
+
+  const updateData = {};
+  if (deliveryJob.driverId && mongoose.Types.ObjectId.isValid(deliveryJob.driverId)) {
+    updateData.driverId = deliveryJob.driverId;
+  }
+  if (deliveryJob.status) {
+    updateData.status = validateStatus(deliveryJob.status);
+  }
+
+  return await Delivery.findByIdAndUpdate(deliveryJob._id, updateData, { new: true });
 };
 
 const getById = async (id) => {
+  validateObjectId(id, "deliveryId");
   return await Delivery.findById(id).populate("restaurantId");
-  // .populate("orderId")
-  // .populate("items.itemId");
 };
 
 const getByOrderId = async (orderId) => {
-  return await Delivery.findOne({ orderId: orderId }).populate([
-    "driverId",
-    "customerId",
-  ]);
+  validateObjectId(orderId, "orderId");
+  return await Delivery.findOne({ orderId }).populate(["driverId", "customerId"]);
 };
 
 const getPendingDeliveries = async () => {

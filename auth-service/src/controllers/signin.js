@@ -25,6 +25,10 @@ const userSignin = (allowedRoles) => async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        if (typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            return res.status(400).json({ message: "Invalid email format." });
+        }
+
         // Check if the user exists
         const user = await User.findOne({ email });
         if (!user) {

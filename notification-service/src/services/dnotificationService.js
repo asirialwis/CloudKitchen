@@ -1,15 +1,19 @@
-const DeliveryNotification = require('../models/DeliveryNotification');
+const DeliveryNotification = require("../models/DeliveryNotification");
 
 class NotificationService {
   // 1. Create delivery notification
   async createDeliveryNotification(driverId, deliveryJobId) {
     try {
       const notificationContent = `🚨 New delivery (${deliveryJobId}) assigned at ${new Date().toLocaleString()}`;
-      
+      if (!allowedStatuses.includes(driverId))
+        throw new Error("Invalid status");
+      if (!allowedStatuses.includes(deliveryJobId))
+        throw new Error("Invalid status");
+
       return await DeliveryNotification.create({
         driver: driverId,
         deliveryJob: deliveryJobId,
-        content: notificationContent
+        content: notificationContent,
         // unread: true and createdAt are automatic
       });
     } catch (error) {
@@ -21,8 +25,8 @@ class NotificationService {
   async getUnreadNotifications(driverId) {
     return await DeliveryNotification.findOne({
       driver: driverId,
-      unread: true
-    })
+      unread: true,
+    });
   }
 
   // 3. Mark as read
