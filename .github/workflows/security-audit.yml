@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: "20.11.1-alpine"
+  NODE_VERSION: "20.11.1"
   MIN_AUDIT_LEVEL: "high" # fail build if >= this severity is found (low|moderate|high|critical)
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: "npm"
-          cache-dependency-path: services/${{ matrix.service }}/package-lock.json
+          cache-dependency-path: ./${{ matrix.service }}/package-lock.json
 
       - name: Install (prod-only)
         run: npm ci --omit=dev
@@ -53,7 +53,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: npm-audit-${{ matrix.service }}
-          path: services/${{ matrix.service }}/audit-report.json
+          path: ./${{ matrix.service }}/audit-report.json
 
   trivy-image:
     name: Trivy Image Scan (${{ matrix.service }})
@@ -81,7 +81,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: services/${{ matrix.service }}/Dockerfile
+          file: ./${{ matrix.service }}/Dockerfile
           tags: ${{ matrix.service }}:ci
           push: false
           load: true
