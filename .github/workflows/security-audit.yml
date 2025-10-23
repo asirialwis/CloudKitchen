@@ -5,7 +5,7 @@ on:
   pull_request:
 
 env:
-  NODE_VERSION: "20"
+  NODE_VERSION: "20.11.1-alpine"
   MIN_AUDIT_LEVEL: "high" # fail build if >= this severity is found (low|moderate|high|critical)
 
 jobs:
